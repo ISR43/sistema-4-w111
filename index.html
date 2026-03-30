@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabique Knauf · Calculadora</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0f0f11;
+    --surface: #18181c;
+    --surface2:#222228;
+    --border:  #2e2e38;
+    --accent:  #e8ff47;
+    --accent2: #47d4ff;
+    --text:    #f0f0f5;
+    --muted:   #7a7a8c;
+    --danger:  #ff6b6b;
+    --success: #47ffb0;
+    --radius:  10px;
+    --mono:    'DM Mono', monospace;
+    --sans:    'Syne', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 40px 16px 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+
+  /* HEADER */
+  .header { margin-bottom: 40px; }
+  .header .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .header h1 { font-size: clamp(28px,5vw,42px); font-weight: 800; line-height: 1.1; }
+  .header h1 span { color: var(--accent); }
+  .header p { margin-top: 10px; color: var(--muted); font-size: 14px; }
+
+  /* SECTIONS */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; margin-bottom: 16px; transition: opacity 0.25s, border-color 0.2s; }
+  .section.active { border-color: var(--accent); }
+  .section.locked { opacity: 0.35; pointer-events: none; }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+  .step-num { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--accent); white-space: nowrap; text-transform: uppercase; }
+  .section h2 { font-size: 16px; font-weight: 700; }
+
+  /* INPUT FIELD */
+  .medidas-field label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .medidas-field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--mono); font-size: 32px; font-weight: 500;
+    padding: 16px 20px; outline: none; letter-spacing: 0.04em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .medidas-field input::placeholder { color: var(--muted); opacity: 0.45; }
+  .medidas-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,255,71,0.12); }
+  .medidas-field input.err { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255,107,107,0.12); }
+  .medidas-hint { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.7; }
+  .medidas-hint b { color: var(--text); }
+
+  .area-pill { display: inline-flex; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--muted); background: var(--surface2); border: 1px dashed var(--border); border-radius: 6px; padding: 9px 14px; margin-top: 12px; min-height: 38px; flex-wrap: wrap; gap: 8px; }
+  .area-pill b { color: var(--accent); }
+  .area-pill .sys-badge { background: rgba(71,212,255,0.15); color: var(--accent2); padding: 2px 8px; border-radius: 4px; font-size: 10px; }
+
+  /* CTA */
+  .btn-calc { width: 100%; margin-top: 8px; background: var(--accent); color: #0f0f11; border: none; border-radius: 8px; padding: 17px; font-family: var(--sans); font-size: 15px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+  .btn-calc:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); }
+  .btn-calc:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  .err-msg { font-family: var(--mono); font-size: 11px; color: var(--danger); margin-top: 8px; display: none; }
+
+  /* MULTIPLE TABIQUE */
+  .multiple-notice { background: rgba(255,193,7,0.1); border: 1px dashed rgba(255,193,7,0.4); border-radius: 8px; padding: 12px 16px; margin: 10px 0; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .multiple-notice b { color: var(--accent); }
+  .mode-selector { display: flex; gap: 8px; margin-top: 10px; }
+  .mode-btn { flex: 1; padding: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+  .mode-btn.active { border-color: var(--accent); background: rgba(232,255,71,0.08); }
+
+  /* RESULTS */
+  #results { display: none; animation: fadeUp 0.35s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .results-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .results-top { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 16px 22px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .results-top h2 { font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+  .results-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 1.9; text-align: right; }
+
+  .mat-table { width: 100%; border-collapse: collapse; }
+  .mat-table tr { border-bottom: 1px solid var(--border); animation: rowIn 0.25s ease both; }
+  .mat-table tr:last-child { border-bottom: none; }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+  .mat-table td { padding: 13px 22px; vertical-align: middle; }
+  .mat-table td:last-child { text-align: right; white-space: nowrap; }
+  .mat-code { font-family: var(--mono); font-size: 10px; color: var(--accent2); letter-spacing: 0.1em; margin-bottom: 3px; }
+  .mat-name { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--text); }
+  .mat-qty  { font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--accent); }
+  .mat-unit { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  
+  .system-divider { background: rgba(71,212,255,0.08); border-left: 3px solid var(--accent2); }
+  .system-divider .mat-code { color: var(--accent); }
+  .system-divider .mat-name { font-weight: 700; color: var(--accent); }
+
+  .results-footer { padding: 11px 22px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 2; }
+
+  .suggestion-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 26px; margin-bottom: 16px; }
+  .suggestion-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--accent); }
+  .suggestion-card p { font-size: 12px; color: var(--muted); margin-bottom: 16px; font-family: var(--mono); line-height: 1.6; }
+  .suggestion-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .suggestion-btn { padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+  .suggestion-btn:hover { border-color: var(--accent); }
+  .suggestion-btn.primary { background: var(--accent); color: #0f0f11; border-color: var(--accent); font-weight: 600; }
+
+  .btn-reset { background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 12px 22px; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; width: 100%; margin-top: 8px; }
+  .btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+  @media (max-width: 480px) { 
+    .mode-selector, .suggestion-actions { flex-direction: column; } 
+    .results-meta { text-align: left; } 
+    .mat-table td { padding: 10px 14px; }
+    .mat-qty { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="eyebrow">▸ KNAUF · Tabiques</div>
+    <h1>Calculadora de<br><span>Materiales</span></h1>
+    <p>Estructura metálica con placas de yeso en ambas caras.</p>
+  </div>
+
+  <!-- PASO 1: Medidas -->
+  <div class="section active" id="s-medidas">
+    <div class="section-head">
+      <span class="step-num">PASO 01</span>
+      <h2>Medidas del tabique</h2>
+    </div>
+    <div class="medidas-field">
+      <label>Largo × Alto (metros)</label>
+      <input type="text" id="medInput" placeholder="8x3" autocomplete="off"
+             oninput="parseMedidas()" onkeydown="if(event.key==='Enter')parseMedidas(true)">
+      <p class="medidas-hint">Formatos: <b>8x3</b> · <b>8*3</b> · <b>8/3</b> · Múltiples: <b>8x3+5x2.6</b></p>
+    </div>
+    <div class="area-pill" id="area-pill">— ingresá las medidas</div>
+    <div class="err-msg" id="err-med">No se reconocen dos medidas válidas. Ejemplo: 8x3</div>
+    
+    <!-- Múltiples tabiques -->
+    <div id="multipleOptions" class="multiple-notice" style="display:none">
+      <b>📋 Múltiples tabiques detectados:</b><br>
+      <span id="multipleList"></span><br><br>
+      <strong>¿Cómo calcular?</strong>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="separate" onclick="setMode('separate')">📄 Separado</button>
+        <button class="mode-btn" data-mode="grouped" onclick="setMode('grouped')">📦 Agrupado por sistema</button>
+      </div>
+    </div>
+    
+    <button class="btn-calc" id="btnCalc" onclick="iniciarCalculo()">CALCULAR MATERIALES</button>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="results">
+    <div class="results-card">
+      <div class="results-top">
+        <h2>Lista de materiales</h2>
+        <div class="results-meta" id="res-meta"></div>
+      </div>
+      <table class="mat-table" id="mat-table"></table>
+      <div class="results-footer">
+        · Tornillería → múltiplo de 50 superior &nbsp;·&nbsp; Sin optimización de cortes &nbsp;·&nbsp; Escalado estricto cinta/masilla
+      </div>
+    </div>
+    
+    <!-- Sugerencia W111 -->
+    <div class="suggestion-card" id="suggestionCard" style="display:none">
+      <h3>💡 Sistema oficial disponible</h3>
+      <p id="suggestionText"></p>
+      <div class="suggestion-actions">
+        <button class="suggestion-btn primary" onclick="recalcularW111()">🔄 Calcular con Knauf W111</button>
+        <button class="suggestion-btn" onclick="document.getElementById('suggestionCard').style.display='none'">✕ Mantener cálculo actual</button>
+      </div>
+    </div>
+    
+    <button class="btn-reset" onclick="resetAll()">↺ Nuevo cálculo</button>
+  </div>
+
+</div>
+
+<script>
+// ==================== CONFIGURACIÓN ====================
+const CONFIG = {
+  LONG_MONTANTE: 2.6,
+  AREA_PLACA: 2.88,
+  FACTOR_CINTA: 1.05 * 2,
+  FACTOR_MASILLA: 0.8 * 2,
+  MULTIPLO_TORNILLOS: 50
+};
+
+// ==================== UTILIDADES ====================
+const ceil = x => Math.ceil(x);
+const round50 = x => Math.ceil(x / CONFIG.MULTIPLO_TORNILLOS) * CONFIG.MULTIPLO_TORNILLOS;
+
+// Parsear medidas: "8x3", "5.5*2.40+3/2.6"
+function parsearMedidas(input) {
+  input = input.trim().replace(/\s+/g, '');
+  if (!input) return null;
+  
+  // Múltiples tabiques con + o -
+  if (/[+\-]/.test(input) && !input.startsWith('-')) {
+    const partes = input.split(/[+\-]/).filter(p => p);
+    return partes.map(p => parsearMedidas(p)).filter(m => m);
+  }
+  
+  // Una sola medida
+  const match = input.match(/^([\d.,]+)[x*/]([\d.,]+)$/i);
+  if (!match) return null;
+  
+  const a = parseFloat(match[1].replace(',', '.'));
+  const b = parseFloat(match[2].replace(',', '.'));
+  if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
+  
+  return {
+    largo: Math.max(a, b),
+    alto: Math.min(a, b),
+    original: `${Math.max(a,b).toFixed(2)} × ${Math.min(a,b).toFixed(2)} m`
+  };
+}
+
+// Determinar sistema y separación (automática según altura)
+function determinarSistema(alto, forzarW111 = false) {
+  if (forzarW111) {
+    // Automática: ≤3.01m → 60cm | >3.01m → 40cm
+    const sep = alto <= 3.01 ? 0.6 : 0.4;
+    const maxAltura = sep === 0.6 ? 3.01 : 3.33;
+    return { 
+      nombre: 'W111', 
+      separacion: sep, 
+      valido: alto <= maxAltura,
+      limite: maxAltura
+    };
+  }
+  // Tabique Común por defecto
+  if (alto <= 3.00) {
+    return { nombre: 'Tabique Común', separacion: 0.4, valido: true, esReferencia: true };
+  }
+  return { nombre: 'Tabique Común', separacion: 0.4, valido: false, error: `Altura ${alto.toFixed(2)}m excede Tabique Común (3.00m)` };
+}
+
+// ==================== FÓRMULAS EXACTAS ====================
+function calcularMontantes(largo, alto, separacion) {
+  // Paso 1: lado mas largo / separacion
+  let paso1 = largo / separacion;
+  // Si entero: sumar 1 | Si decimal: redondear arriba y sumar 1
+  paso1 = Number.isInteger(paso1) ? paso1 + 1 : ceil(paso1) + 1;
+  // Paso 2: (alto × paso1) / 2.6 → redondear arriba
+  return ceil((alto * paso1) / CONFIG.LONG_MONTANTE);
+}
+
+function calcularSoleras(largo) {
+  return ceil((largo * 2) / CONFIG.LONG_MONTANTE);
+}
+
+function calcularPlacas(largo, alto) {
+  return ceil((largo * alto * 2) / CONFIG.AREA_PLACA);
+}
+
+function calcularCintaPapel(largo, alto) {
+  const consumo = largo * alto * CONFIG.FACTOR_CINTA;
+  // Escalado obligatorio: 23m → 75m → 150m (UNA SOLA presentación)
+  if (ceil(consumo / 23) <= 1) return { cod: '127', desc: 'Cinta de papel 23 m', cant: 1 };
+  if (ceil(consumo / 75) <= 1) return { cod: '129', desc: 'Cinta de papel 75 m', cant: 1 };
+  return { cod: '123', desc: 'Cinta de papel 150 m', cant: ceil(consumo / 150) };
+}
+
+function calcularMasilla(largo, alto) {
+  const consumo = largo * alto * CONFIG.FACTOR_MASILLA;
+  // Escalado: 1.8kg → 7kg → 15kg → 32kg
+  if (ceil(consumo / 1.8) <= 1) return { cod: 'ma1', desc: 'Masilla Anclaflex 1.8 kg', cant: 1 };
+  if (ceil(consumo / 7) <= 1) return { cod: 'ma7', desc: 'Masilla Anclaflex 7 kg', cant: 1 };
+  if (ceil(consumo / 15) <= 1) return { cod: 'ma15', desc: 'Masilla Anclaflex 15 kg', cant: 1 };
+  return { cod: 'ma32', desc: 'Masilla Anclaflex 32 kg', cant: ceil(consumo / 32) };
+}
+
+// ==================== CÁLCULO PRINCIPAL ====================
+function calcularTabique(largo, alto, sistema) {
+  const montantes = calcularMontantes(largo, alto, sistema.separacion);
+  const soleras = calcularSoleras(largo);
+  
+  // Tornillería (múltiplos de 50)
+  const t8_cant = round50(6 * soleras);
+  const tarugo_cant = round50(6 * soleras);
+  const t1_cant = round50(6 * montantes);
+  const t2_cant = round50(largo * alto * 2 * 18);
+  
+  const placas = calcularPlacas(largo, alto);
+  const cinta = calcularCintaPapel(largo, alto);
+  const masilla = calcularMasilla(largo, alto);
+  
+  return {
+    sistema: sistema.nombre,
+    separacion: sistema.separacion * 100,
+    medidas: `${largo.toFixed(2)} × ${alto.toFixed(2)} m`,
+    area: (largo * alto).toFixed(2),
+    materiales: [
+      { cod: '259', desc: 'MONTANTES 69×35 mm x 2,6 m', cant: montantes, unidad: 'barras' },
+      { cod: '266', desc: 'Soleras 70 x 35 mm x 2,6 m', cant: soleras, unidad: 'barras' },
+      { cod: 't8', desc: 'TORNILLO FIX 8x1x3/4', cant: t8_cant, unidad: 'unidades' },
+      { cod: '1157', desc: 'TARUGO 6 mm SIN TOPE', cant: tarugo_cant, unidad: 'unidades' },
+      { cod: 't1', desc: 'TORNILLO T1 AGUJA 8x9/16', cant: t1_cant, unidad: 'unidades' },
+      { cod: 't2', desc: 'TORNILLO T2 PUNTA AGUJA', cant: t2_cant, unidad: 'unidades' },
+      { cod: '125240', desc: 'PLACA KNAUF STD 12.5 MM X 2.40 X 1.20 MTS', cant: placas, unidad: 'placas' },
+      { cod: cinta.cod, desc: cinta.desc, cant: cinta.cant, unidad: 'unidades' },
+      { cod: masilla.cod, desc: masilla.desc, cant: masilla.cant, unidad: 'unidades' }
+    ]
+  };
+}
+
+// ==================== ESTADO GLOBAL ====================
+let estado = {
+  tabiques: null,
+  modo: 'separate'
+};
+
+// ==================== UI HANDLERS ====================
+function setMode(mode) {
+  estado.modo = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active');
+}
+
+function parseMedidas(force) {
+  const raw = document.getElementById('medInput').value.trim();
+  const medidas = parsearMedidas(raw);
+  const inp = document.getElementById('medInput');
+  const err = document.getElementById('err-med');
+  
+  if (!medidas) {
+    document.getElementById('area-pill').innerHTML = '— ingresá las medidas';
+    inp.classList.remove('err'); err.style.display = 'none';
+    document.getElementById('multipleOptions').style.display = 'none';
+    return false;
+  }
+  
+  inp.classList.remove('err'); err.style.display = 'none';
+  
+  // Manejo múltiple
+  if (Array.isArray(medidas)) {
+    estado.tabiques = medidas;
+    document.getElementById('multipleList').innerHTML = 
+      medidas.map((m, i) => `<b>Tabique ${i+1}:</b> ${m.original}`).join(' &nbsp;|&nbsp; ');
+    document.getElementById('multipleOptions').style.display = 'block';
+    document.getElementById('area-pill').innerHTML = `${medidas.length} tabique${medidas.length>1?'s':''} detectado${medidas.length>1?'s':''}`;
+    return true;
+  }
+  
+  // Simple
+  estado.tabiques = [medidas];
+  document.getElementById('multipleOptions').style.display = 'none';
+  document.getElementById('area-pill').innerHTML = 
+    `Largo: <b>${medidas.largo} m</b> &nbsp;·&nbsp; Alto: <b>${medidas.alto} m</b> &nbsp;·&nbsp; Área: <b>${(medidas.largo*medidas.alto).toFixed(2)} m²</b>`;
+  return true;
+}
+
+function iniciarCalculo() {
+  if (!parseMedidas(true)) {
+    document.getElementById('err-med').style.display = 'block';
+    return;
+  }
+  
+  if (Array.isArray(estado.tabiques) && estado.tabiques.length > 1) {
+    // Múltiples: usar modo seleccionado
+    if (estado.modo === 'separate') {
+      mostrarResultadosSeparados();
+    } else {
+      mostrarResultadosAgrupados();
+    }
+  } else {
+    // Simple: Tabique Común primero
+    const t = estado.tabiques[0];
+    const sistema = determinarSistema(t.alto, false);
+    
+    if (!sistema.valido) {
+      document.getElementById('err-med').textContent = `⚠️ ${sistema.error}`;
+      document.getElementById('err-med').style.display = 'block';
+      return;
+    }
+    
+    const resultado = calcularTabique(t.largo, t.alto, sistema);
+    mostrarResultado(resultado, sistema.esReferencia, t);
+  }
+  
+  document.getElementById('results').style.display = 'block';
+  setTimeout(() => document.getElementById('results').scrollIntoView({behavior: 'smooth'}), 100);
+}
+
+function mostrarResultado(resultado, esReferencia, medidas) {
+  // Meta info
+  const sepBadge = `<span class="sys-badge">${resultado.separacion} cm</span>`;
+  const refBadge = esReferencia ? '<span class="sys-badge" style="background:rgba(255,193,7,0.2);color:#ffc107">Referencia</span>' : '';
+  document.getElementById('res-meta').innerHTML = 
+    `${resultado.sistema} ${sepBadge}${refBadge}<br>${medidas.original} = ${resultado.area} m²`;
+  
+  // Tabla
+  const tbody = document.getElementById('mat-table');
+  tbody.innerHTML = '';
+  resultado.materiales.forEach((m, i) => {
+    const tr = document.createElement('tr');
+    tr.style.animationDelay = (i * 0.03) + 's';
+    tr.innerHTML = `<td><div class="mat-code">${m.cod}</div><div class="mat-name">${m.desc}</div></td>
+      <td><div class="mat-qty">${m.cant}</div><div class="mat-unit">${m.unidad}</div></td>`;
+    tbody.appendChild(tr);
+  });
+  
+  // Sugerencia W111 si es Tabique Común y compatible
+  const suggestionCard = document.getElementById('suggestionCard');
+  if (esReferencia && medidas.alto <= 3.33) {
+    suggestionCard.style.display = 'block';
+    const sepAuto = medidas.alto <= 3.01 ? '60 cm' : '40 cm';
+    document.getElementById('suggestionText').innerHTML = 
+      `Este tabique (${medidas.alto} m de altura) es compatible con el sistema oficial <b>Knauf W111</b> con separación de <b>${sepAuto}</b>.`;
+    window._pendingW111 = { largo: medidas.largo, alto: medidas.alto };
+  } else {
+    suggestionCard.style.display = 'none';
+  }
+}
+
+function mostrarResultadosSeparados() {
+  const tbody = document.getElementById('mat-table');
+  tbody.innerHTML = '';
+  let metaHtml = '';
+  let rowDelay = 0;
+  
+  estado.tabiques.forEach((t, idx) => {
+    const sistema = determinarSistema(t.alto, false);
+    if (!sistema.valido) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="2" style="color:var(--danger);font-family:var(--mono);font-size:11px">
+        Tabique ${idx+1} (${t.original}): ${sistema.error}
+      </td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+    
+    const res = calcularTabique(t.largo, t.alto, sistema);
+    
+    // Divider por sistema
+    const divTr = document.createElement('tr');
+    divTr.className = 'system-divider';
+    divTr.innerHTML = `<td colspan="2" style="padding:8px 22px;font-family:var(--mono);font-size:10px">
+      ▼ Tabique ${idx+1}: ${res.sistema} · ${res.separacion} cm · ${t.original}
+    </td>`;
+    tbody.appendChild(divTr);
+    
+    res.materiales.forEach(m => {
+      const tr = document.createElement('tr');
+      tr.style.animationDelay = (rowDelay++ * 0.02) + 's';
+      tr.innerHTML = `<td><div class="mat-code">${m.cod}</div><div class="mat-name">${m.desc}</div></td>
+        <td><div class="mat-qty">${m.cant}</div><div class="mat-unit">${m.unidad}</div></td>`;
+      tbody.appendChild(tr);
+    });
+    
+    metaHtml += `${res.sistema}(${res.separacion}cm):${res.area}m² `;
+  });
+  
+  document.getElementById('res-meta').innerHTML = `${estado.modo === 'separate' ? '📄 Separado' : '📦 Agrupado'}<br>${metaHtml.trim()}`;
+  document.getElementById('suggestionCard').style.display = 'none';
+}
+
+function mostrarResultadosAgrupados() {
+  const grupos = {};
+  
+  estado.tabiques.forEach(t => {
+    const sistema = determinarSistema(t.alto, false);
+    if (!sistema.valido) return;
+    
+    const key = `${sistema.nombre}-${sistema.separacion}`;
+    if (!grupos[key]) {
+      grupos[key] = { sistema, materiales: {}, tabiques: [] };
+    }
+    grupos[key].tabiques.push(t);
+    
+    const calc = calcularTabique(t.largo, t.alto, sistema);
+    calc.materiales.forEach(m => {
+      if (!grupos[key].materiales[m.cod]) {
+        grupos[key].materiales[m.cod] = { ...m, total: 0 };
+      }
+      grupos[key].materiales[m.cod].total += m.cant;
+    });
+  });
+  
+  // Renderizar
+  const tbody = document.getElementById('mat-table');
+  tbody.innerHTML = '';
+  let rowDelay = 0;
+  let metaParts = [];
+  
+  Object.values(grupos).forEach(grupo => {
+    // Header del grupo
+    const headerTr = document.createElement('tr');
+    headerTr.className = 'system-divider';
+    headerTr.innerHTML = `<td colspan="2" style="padding:10px 22px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:4px">
+        ${grupo.sistema.nombre.toUpperCase()} · ${grupo.sistema.separacion*100} cm
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        Tabiques: ${grupo.tabiques.map(t=>t.original).join(', ')}
+      </div>
+    </td>`;
+    tbody.appendChild(headerTr);
+    
+    // Materiales agrupados
+    Object.values(grupo.materiales).forEach(m => {
+      const tr = document.createElement('tr');
+      tr.style.animationDelay = (rowDelay++ * 0.02) + 's';
+      tr.innerHTML = `<td><div class="mat-code">${m.cod}</div><div class="mat-name">${m.desc}</div></td>
+        <td><div class="mat-qty">${m.total}</div><div class="mat-unit">${m.unidad}</div></td>`;
+      tbody.appendChild(tr);
+    });
+    
+    metaParts.push(`${grupo.sistema.nombre}(${grupo.sistema.separacion*100}cm)`);
+  });
+  
+  document.getElementById('res-meta').innerHTML = `📦 Agrupado por sistema<br>${metaParts.join(' | ')}`;
+  document.getElementById('suggestionCard').style.display = 'none';
+}
+
+function recalcularW111() {
+  if (!window._pendingW111) return;
+  
+  const { largo, alto } = window._pendingW111;
+  const sistema = determinarSistema(alto, true);
+  
+  if (!sistema.valido) {
+    alert(`⚠️ Altura ${alto.toFixed(2)}m no compatible con W111 ${sistema.separacion*100}cm (máx: ${sistema.limite}m)`);
+    return;
+  }
+  
+  const resultado = calcularTabique(largo, alto, sistema);
+  mostrarResultado(resultado, false, { largo, alto, original: `${largo.toFixed(2)} × ${alto.toFixed(2)} m` });
+  document.getElementById('suggestionCard').style.display = 'none';
+}
+
+function resetAll() {
+  document.getElementById('medInput').value = '';
+  estado = { tabiques: null, modo: 'separate' };
+  document.getElementById('area-pill').innerHTML = '— ingresá las medidas';
+  document.getElementById('multipleOptions').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('suggestionCard').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ Calculadora Knauf cargada');
+});
+</script>
+</body>
+</html>
