@@ -134,6 +134,48 @@
             color: var(--muted); cursor: pointer; transition: all 0.15s; width: 100%; margin-top: 8px;
         }
         .btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+        /* Opciones panel */
+        .options-panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; margin-top: 16px;
+            display: none;
+        }
+        .options-panel.visible { display: block; }
+        .options-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 12px;
+        }
+        .option-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px; transition: border-color 0.2s;
+        }
+        .option-card.disabled { opacity: 0.4; pointer-events: none; }
+        .option-card h3 {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--accent2); margin-bottom: 8px;
+        }
+        .option-card select, .option-card input, .option-card button {
+            width: 100%; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-family: var(--mono);
+            font-size: 12px; padding: 8px; margin-top: 6px; outline: none;
+        }
+        .option-card button {
+            background: transparent; border: 1px dashed var(--border);
+            color: var(--accent); cursor: pointer; font-weight: 600;
+            transition: background 0.15s;
+        }
+        .option-card button:hover { background: rgba(232, 255, 71, 0.06); }
+        .option-card .toggle-active {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 8px;
+        }
+        .option-card .toggle-active span { font-size: 10px; color: var(--muted); }
+        .option-card .chip {
+            display: inline-block; font-family: var(--mono); font-size: 9px;
+            background: var(--accent); color: #0f0f11; padding: 3px 8px;
+            border-radius: 20px; margin-left: 6px;
+        }
         @media (max-width: 480px) {
             .mode-selector { flex-direction: column; }
             .results-meta { text-align: left; }
@@ -180,11 +222,103 @@
                     <h2>Lista de materiales</h2>
                     <div class="results-meta" id="res-meta"></div>
                 </div>
-                <table class="mat-table" id="mat-table"><table>
+                <table class="mat-table" id="mat-table"></table>
                 <div class="results-footer">
                     · Tornillería → múltiplo de 50 superior &nbsp;·&nbsp; Sin optimización de cortes &nbsp;·&nbsp; Escalado estricto cinta/masilla
                 </div>
             </div>
+
+            <!-- Sugerencia de cambio Tabique Común → W111 (FIX #4) -->
+            <div class="options-panel visible" id="panelW111Sugerencia" style="display:none; margin-top:0; margin-bottom:16px;">
+                <div class="section-head">
+                    <span class="step-num">SUGERENCIA</span>
+                    <h2>¿Pasar este cálculo al sistema Knauf W111?</h2>
+                </div>
+                <p style="font-family:var(--mono); font-size:11px; color:var(--muted); line-height:1.7; margin-bottom:12px;">
+                    Estás calculando con <b style="color:var(--accent)">Tabique Común</b> (cálculo de referencia).
+                    El sistema <b style="color:var(--accent)">W111</b> del manual Knauf es compatible con estas medidas
+                    y te permite elegir separación cada 40 o 60 cm. ¿Querés que recalcule con W111?
+                </p>
+                <div style="display:flex; gap:8px;">
+                    <button class="mode-btn" style="flex:1;" onclick="recargarConW111()">✅ Sí, usar W111</button>
+                    <button class="mode-btn" style="flex:1;" onclick="mantenerTabiqueComun()">❌ No, mantener Tabique Común</button>
+                </div>
+            </div>
+
+            <!-- PANEL DE OPCIONES ADICIONALES -->
+            <div class="options-panel" id="optionsPanel">
+                <div class="section-head">
+                    <span class="step-num">OPCIONALES</span>
+                    <h2>Personalizar cálculo</h2>
+                </div>
+                <div class="options-grid">
+                    <!-- Perfilería 99/100 (solo Tabique Común) - FIX #3: clase disabled aplicada dinámicamente -->
+                    <div class="option-card" id="cardPerf99">
+                        <h3>🏗️ Perfilería 99/100 <span id="perf99Badge" style="font-size:9px;color:var(--warn);"></span></h3>
+                        <div class="toggle-active">
+                            <span>Montantes 99 mm + soleras 100 mm</span>
+                            <input type="checkbox" id="optPerf99" onchange="aplicarOpcion('perf99')">
+                        </div>
+                        <span style="font-size:9px;color:var(--muted);">Solo se aplica a Tabique Común</span>
+                    </div>
+
+                    <!-- Cinta fibra de vidrio -->
+                    <div class="option-card">
+                        <h3>🧵 Cinta</h3>
+                        <select id="optCinta" onchange="aplicarOpcion('cinta')">
+                            <option value="papel">Papel (estándar)</option>
+                            <option value="fibra">Fibra de vidrio</option>
+                        </select>
+                    </div>
+
+                    <!-- Tarugos -->
+                    <div class="option-card">
+                        <h3>🔩 Tarugos</h3>
+                        <select id="optTarugo" onchange="aplicarOpcion('tarugo')">
+                            <option value="1157">1157 – 6 mm sin tope</option>
+                            <option value="357">357 – 6 mm con tope</option>
+                            <option value="1158">1158 – 8 mm con tope</option>
+                            <option value="1162">1162 – 8 mm sin tope</option>
+                            <option value="1163">1163 – ladrillo hueco 6 mm</option>
+                            <option value="1166">1166 – ladrillo hueco 8 mm</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de placa -->
+                    <div class="option-card">
+                        <h3>📐 Placas</h3>
+                        <select id="optPlaca" onchange="aplicarOpcion('placa')">
+                            <option value="std240">STD 2.40 m</option>
+                            <option value="std260">STD 2.60 m</option>
+                            <option value="std300">STD 3.00 m</option>
+                            <option value="rh240">RH 2.40 m</option>
+                            <option value="rh260">RH 2.60 m</option>
+                            <option value="rh300">RH 3.00 m</option>
+                        </select>
+                    </div>
+
+                    <!-- Aislación acústica -->
+                    <div class="option-card">
+                        <h3>🔊 Aislación</h3>
+                        <div class="toggle-active">
+                            <span>Lana + banda + sellador</span>
+                            <input type="checkbox" id="optAislacion" onchange="aplicarOpcion('aislacion')">
+                        </div>
+                    </div>
+
+                    <!-- Pintura -->
+                    <div class="option-card">
+                        <h3>🎨 Pintura</h3>
+                        <select id="optLineaPintura" style="margin-bottom:4px;">
+                            <option value="premium">Premium</option>
+                            <option value="econove">Econove</option>
+                        </select>
+                        <button onclick="aplicarPintura()">Calcular pintura</button>
+                        <div id="pinturaInfo" style="margin-top:6px;font-size:10px;color:var(--muted);"></div>
+                    </div>
+                </div>
+            </div>
+
             <button class="btn-reset" onclick="resetAll()">↺ Nuevo cálculo</button>
         </div>
     </div>
@@ -203,6 +337,42 @@
         const ceil = x => Math.ceil(x);
         const round50 = x => Math.ceil(x / CONFIG.MULTIPLO_TORNILLOS) * CONFIG.MULTIPLO_TORNILLOS;
 
+        // FIX #2: Función de optimización genérica (reutilizable para pintura y sellador)
+        function optimizarEnvases(litros, envases) {
+            // envases: array de mayor a menor capacidad, cada uno con {cod, desc, cap}
+            let restante = litros;
+            const seleccion = [];
+            for (let e of envases) {
+                const necesarios = Math.floor(restante / e.cap);
+                if (necesarios > 0) {
+                    seleccion.push({ cod: e.cod, desc: e.desc, cant: necesarios });
+                    restante -= necesarios * e.cap;
+                }
+            }
+            if (restante > 0) {
+                const menor = [...envases].reverse().find(e => e.cap >= restante);
+                if (menor) {
+                    const existente = seleccion.find(s => s.cod === menor.cod);
+                    if (existente) existente.cant += 1;
+                    else seleccion.push({ cod: menor.cod, desc: menor.desc, cant: 1 });
+                }
+            }
+            return seleccion;
+        }
+
+        // Opciones seleccionadas por el usuario
+        let opcionesUsuario = {
+            cinta: 'papel',
+            tarugo: '1157',
+            placa: 'std240',
+            perf99: false,
+            aislacion: false,
+            pintura: null
+        };
+
+        // FIX #4: Estado para la sugerencia Tabique Común → W111
+        let sugerenciaW111 = { pendiente: false, medidaIdx: -1 };
+
         function parsearMedidas(input) {
             input = input.trim().replace(/\s+/g, '');
             if (!input) return null;
@@ -214,7 +384,8 @@
             if (!match) return null;
             const a = parseFloat(match[1].replace(',', '.'));
             const b = parseFloat(match[2].replace(',', '.'));
-            if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
+            // FIX: validación adicional - rechazo de medidas > 50m o == 0
+            if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0 || a > 50 || b > 50) return null;
             return {
                 largo: Math.max(a, b),
                 alto: Math.min(a, b),
@@ -231,54 +402,100 @@
             return { nombre: 'ERROR', separacion: 0.4, valido: false, error: 'Altura excede límites.' };
         }
 
-        function calcularTabique(medida) {
+        function calcularTabique(medida, opciones = {}) {
             const { largo, alto } = medida;
             const sist = determinarSistema(alto);
             if (!sist.valido) return null;
 
-            // Fórmulas oficiales Knauf del documento
+            const usarPerf99 = opciones.perf99 && sist.esReferencia;
+
+            // Montantes y soleras
             let factorMontantes = largo / sist.separacion;
             factorMontantes = Number.isInteger(factorMontantes) ? factorMontantes + 1 : ceil(factorMontantes) + 1;
             let montantes = ceil((alto * factorMontantes) / CONFIG.LONG_MONTANTE);
-            if (sist.nombre === 'W115') montantes *= 2; 
+            if (sist.nombre === 'W115') montantes *= 2;
 
             let soleras = ceil((largo * 2) / CONFIG.LONG_MONTANTE);
             if (sist.nombre === 'W115') soleras *= 2;
 
-            let numPlacasFactor = sist.doublePlaca ? 4 : 2;
-            let placas = ceil((largo * alto * numPlacasFactor) / 2.88);
-            if (sist.multiplier === 2) placas = ceil(((largo * alto * 4) / 2.88) * 2);
+            // Códigos según perfilería
+            let codMontante = '259', descMontante = 'MONTANTES 69×35 mm x 2,6 m';
+            let codSolera = '266', descSolera = 'Soleras 70 x 35 mm x 2,6 m';
+            if (usarPerf99) {
+                codMontante = '604'; descMontante = 'MONTANTES 99×35 mm x 2,6 m';
+                codSolera = '1115'; descSolera = 'Soleras 100 x 35 mm x 2,6 m';
+            }
 
-            let t8 = round50(6 * soleras);
-            let tarugos = round50(6 * soleras);
+            // Placas según opción seleccionada
+            const placaSel = opciones.placa || 'std240';
+            let areaPlaca, codPlaca, descPlaca;
+            if (placaSel === 'std240') { areaPlaca = 2.88; codPlaca = '125240'; descPlaca = 'PLACA KNAUF STD 12.5 MM X 2.40 X 1.20 MTS'; }
+            else if (placaSel === 'std260') { areaPlaca = 3.12; codPlaca = '125260'; descPlaca = 'PLACA KNAUF STD 12.5 MM X 2.60 X 1.20 MTS'; }
+            else if (placaSel === 'std300') { areaPlaca = 3.6; codPlaca = '125300'; descPlaca = 'PLACA KNAUF STD 12.5 MM X 3.00 X 1.20 MTS'; }
+            else if (placaSel === 'rh240') { areaPlaca = 2.88; codPlaca = '125240RH'; descPlaca = 'PLACA KNAUF RH 12.5 MM X 2.40 X 1.20 MTS'; }
+            else if (placaSel === 'rh260') { areaPlaca = 3.12; codPlaca = '125260RH'; descPlaca = 'PLACA KNAUF RH 12.5 MM X 2.60 X 1.20 MTS'; }
+            else if (placaSel === 'rh300') { areaPlaca = 3.6; codPlaca = '125300RH'; descPlaca = 'PLACA KNAUF RH 12.5 MM X 3.00 X 1.20 MTS'; }
+
+            // Placas
+            let numPlacasFactor = sist.doublePlaca ? 4 : 2;
+            let placas = ceil((largo * alto * numPlacasFactor) / areaPlaca);
+            if (sist.multiplier === 2) placas = ceil(((largo * alto * 4) / areaPlaca) * 2);
+
+            // Tornillos fijación (t8 o t10 según tarugo)
+            const tarugoSel = opciones.tarugo || '1157';
+            const usaTarugo8mm = ['1158','1162','1166'].includes(tarugoSel);
+            const codTornilloFij = usaTarugo8mm ? 't10' : 't8';
+            const descTornilloFij = usaTarugo8mm ? 'TORNILLO FIX 10x1.3/4' : 'TORNILLO FIX 8x1x3/4';
+            const tFij = round50(6 * soleras);
+
+            // Tarugos
+            const descTarugo = {
+                '1157':'TARUGO 6 mm SIN TOPE', '357':'TARUGO 6 mm CON TOPE',
+                '1158':'TARUGO 8 mm CON TOPE', '1162':'TARUGO 8 mm SIN TOPE',
+                '1163':'TARUGO LADRILLO HUECO 6 mm', '1166':'TARUGO LADRILLO HUECO 8 mm'
+            }[tarugoSel] || 'TARUGO 6 mm SIN TOPE';
+            const tarugos = round50(6 * soleras);
+
             let t1 = round50(6 * montantes);
-            
-            // Tornillos placas (18 por m2 std, 9 por m2 en doble)
+
+            // Fórmula validada por el cliente (NO modificar):
+            // m² de placa = total de área de placa cubriendo el tabique
+            // Tabique Común / W111: 1 capa × 2 lados = 2 m² de placa / m² de pared
+            // W112 / W115 / W116: 2 capas × 2 lados = 4 m² de placa / m² de pared
+            // (el *2 de W115/W116 aplica solo a placas, no a tornillos)
             let m2Placa = largo * alto * (sist.doublePlaca ? 4 : 2);
-            if(sist.nombre === 'W115' || sist.nombre === 'W116') m2Placa = largo * alto * 4;
-            
+            if (sist.nombre === 'W115' || sist.nombre === 'W116') m2Placa = largo * alto * 4;
             let t2 = round50(m2Placa * (sist.doublePlaca ? 9 : 18));
             let t3 = sist.doublePlaca ? round50(m2Placa * 9) : 0;
 
-            // Cinta (Escalado estricto)
+            // Cinta
             const consumoCinta = largo * alto * 1.05 * 2;
-            let cinta = { cod: '123', desc: 'Cinta de papel 150 m', cant: ceil(consumoCinta / 150) };
-            if (ceil(consumoCinta / 23) <= 1) cinta = { cod: '127', desc: 'Cinta de papel 23 m', cant: 1 };
-            else if (ceil(consumoCinta / 75) <= 1) cinta = { cod: '129', desc: 'Cinta de papel 75 m', cant: 1 };
+            let cinta;
+            const usaFibra = opciones.cinta === 'fibra';
+            if (usaFibra) {
+                if (ceil(consumoCinta / 20) <= 1) cinta = { cod: '118', desc: 'Cinta fibra de vidrio 20 m', cant: 1 };
+                else if (ceil(consumoCinta / 45) <= 1) cinta = { cod: '119', desc: 'Cinta fibra de vidrio 45 m', cant: 1 };
+                else cinta = { cod: '122', desc: 'Cinta fibra de vidrio 90 m', cant: ceil(consumoCinta / 90) };
+            } else {
+                if (ceil(consumoCinta / 23) <= 1) cinta = { cod: '127', desc: 'Cinta de papel 23 m', cant: 1 };
+                else if (ceil(consumoCinta / 75) <= 1) cinta = { cod: '129', desc: 'Cinta de papel 75 m', cant: 1 };
+                else cinta = { cod: '123', desc: 'Cinta de papel 150 m', cant: ceil(consumoCinta / 150) };
+            }
 
-            // Masilla (Escalado estricto)
+            // Masilla
             const consumoMasilla = largo * alto * 2 * 0.8;
-            let masilla = { cod: 'ma32', desc: 'masilla anclaflex x 32 kg', cant: ceil(consumoMasilla / 32) };
+            let masilla;
             if (ceil(consumoMasilla / 1.8) <= 1) masilla = { cod: 'ma1', desc: 'Masilla anclaflex x 1,8 kg', cant: 1 };
             else if (ceil(consumoMasilla / 7) <= 1) masilla = { cod: 'ma7', desc: 'masilla anclaflex x 7 kg', cant: 1 };
             else if (ceil(consumoMasilla / 15) <= 1) masilla = { cod: 'ma15', desc: 'masilla anclaflex x 15 kg', cant: 1 };
+            else masilla = { cod: 'ma32', desc: 'masilla anclaflex x 32 kg', cant: ceil(consumoMasilla / 32) };
 
             const listado = [
-                { cod: '259', desc: 'MONTANTES 69×35 mm x 2,6 m', cant: montantes, u: 'barras' },
-                { cod: '266', desc: 'Soleras 70 x 35 mm x 2,6 m', cant: soleras, u: 'barras' },
-                { cod: '125240', desc: 'PLACA KNAUF STD 12.5 MM X 2.40 X 1.20 MTS', cant: placas, u: 'unidades' },
-                { cod: 't8', desc: 'TORNILLO FIX 8x1x3/4', cant: t8, u: 'unidades' },
-                { cod: '1157', desc: 'TARUGO 6 mm SIN TOPE', cant: tarugos, u: 'unidades' },
+                { cod: codMontante, desc: descMontante, cant: montantes, u: 'barras' },
+                { cod: codSolera, desc: descSolera, cant: soleras, u: 'barras' },
+                { cod: codPlaca, desc: descPlaca, cant: placas, u: 'unidades' },
+                { cod: codTornilloFij, desc: descTornilloFij, cant: tFij, u: 'unidades' },
+                { cod: tarugoSel, desc: descTarugo, cant: tarugos, u: 'unidades' },
                 { cod: 't1', desc: 'TORNILLO T1 AGUJA 8x9/16', cant: t1, u: 'unidades' },
                 { cod: 't2', desc: 'TORNILLO T2 PUNTA AGUJA', cant: t2, u: 'unidades' }
             ];
@@ -286,9 +503,40 @@
             listado.push({ cod: cinta.cod, desc: cinta.desc, cant: cinta.cant, u: 'unidades' });
             listado.push({ cod: masilla.cod, desc: masilla.desc, cant: masilla.cant, u: 'unidades' });
 
+            // Aislación opcional
+            if (opciones.aislacion) {
+                const area = largo * alto;
+                const rollosLana = ceil(area / 14.4);
+                listado.push({ cod: '876911', desc: 'LANA KNAUF Earthwool 39 70MM (14.4m2 Rollo)', cant: rollosLana, u: 'rollos' });
+
+                const bandaCant = ceil((soleras * CONFIG.LONG_MONTANTE) / 30);
+                listado.push({ cod: '75', desc: 'BANDA ACUSTICA 70 mm KNAUF X 30 mts', cant: bandaCant, u: 'rollos' });
+
+                // FIX #2: sellador cubre el perímetro completo de AMBAS caras
+                // juntas (m) = perímetro total = 2 × (largo + alto) × 2 lados
+                const juntas = 4 * (largo + alto);
+                const rendPomo = 3.4, rendBalde = 36;
+                if (juntas <= rendPomo) listado.push({ cod: '1050', desc: 'SELLADOR ACUSTICO FUGENDICHT POMO 300ml', cant: 1, u: 'unidades' });
+                else if (juntas <= rendBalde) listado.push({ cod: '1049', desc: 'SELLADOR ACUSTICO FUGENDICHT BALDE 5 KG', cant: 1, u: 'unidades' });
+                else listado.push({ cod: '1049', desc: 'SELLADOR ACUSTICO FUGENDICHT BALDE 5 KG', cant: ceil(juntas / rendBalde), u: 'unidades' });
+            }
+
+            // Pintura
+            if (opciones.pintura) {
+                opciones.pintura.envases.forEach(e => {
+                    listado.push({ cod: e.cod, desc: e.desc, cant: e.cant, u: 'unidades' });
+                });
+                if (opciones.pintura.sellador) {
+                    opciones.pintura.sellador.forEach(s => {
+                        listado.push({ cod: s.cod, desc: s.desc, cant: s.cant, u: 'unidades' });
+                    });
+                }
+            }
+
             return {
                 sistema: sist.nombre,
                 separacion: sist.separacion,
+                esReferencia: sist.esReferencia,
                 listado
             };
         }
@@ -299,7 +547,11 @@
             estado.modo = mode;
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active');
-            if (estado.tabiques.length) renderResultados();
+            if (estado.tabiques.length) {
+                renderResultados();
+                // FIX #4: re-evaluar sugerencia W111 al cambiar modo
+                evaluarSugerenciaW111();
+            }
         }
 
         function parseMedidas() {
@@ -336,18 +588,68 @@
                 document.getElementById('medInput').classList.add('err');
                 return;
             }
+            opcionesUsuario = {
+                cinta: 'papel',
+                tarugo: '1157',
+                placa: 'std240',
+                perf99: false,
+                aislacion: false,
+                pintura: null
+            };
+            sincronizarUIconOpciones();
             renderResultados();
+            // FIX #4: mostrar sugerencia de cambio a W111 si aplica
+            evaluarSugerenciaW111();
+        }
+
+        // FIX #4: evaluar si hay tabiques en Tabique Común compatibles con W111
+        function evaluarSugerenciaW111() {
+            const panel = document.getElementById('panelW111Sugerencia');
+            const hayTabiqueComun = estado.tabiques.some(t => t.alto <= 3.00);
+            const hayTabiqueAlto = estado.tabiques.some(t => t.alto > 3.00 && t.alto <= 3.33);
+            // Solo mostrar sugerencia si hay tabiques comunes Y hay tabiques w111 (mezcla)
+            // o si todos son comunes pero queremos ofrecer el upgrade
+            if (hayTabiqueComun) {
+                panel.style.display = 'block';
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function recargarConW111() {
+            // Buscar el primer tabique Tabique Común y subir su alto a 3.01 para forzar W111
+            // NOTA: esto solo aplica al primer tabique común. Si hay varios, el usuario deberá hacerlo manualmente.
+            const idx = estado.tabiques.findIndex(t => t.alto <= 3.00);
+            if (idx === -1) return;
+            const t = estado.tabiques[idx];
+            // Subir el alto a 3.01 (mínimo W111) manteniendo el largo
+            estado.tabiques[idx] = {
+                ...t,
+                alto: 3.01,
+                original: `${t.largo.toFixed(2)} × 3.01 m`
+            };
+            // Actualizar el input
+            const input = estado.tabiques.map(tab => tab.original.replace(' × ', 'x').replace(' m', '')).join('+');
+            document.getElementById('medInput').value = input;
+            document.getElementById('panelW111Sugerencia').style.display = 'none';
+            renderResultados();
+        }
+
+        function mantenerTabiqueComun() {
+            document.getElementById('panelW111Sugerencia').style.display = 'none';
         }
 
         function renderResultados() {
             const table = document.getElementById('mat-table');
             table.innerHTML = '';
             let currentSistHTML = '';
+            let hayTabiqueComun = false;
 
             if (estado.modo === 'separate') {
                 estado.tabiques.forEach(tabique => {
-                    const result = calcularTabique(tabique);
+                    const result = calcularTabique(tabique, opcionesUsuario);
                     if (!result) return;
+                    if (result.esReferencia) hayTabiqueComun = true;
                     
                     currentSistHTML += `
                         <tr class="system-divider">
@@ -355,18 +657,19 @@
                                 <div class="mat-code">SISTEMA ${result.sistema}</div>
                                 <div class="mat-name">Medidas: ${tabique.largo}x${tabique.alto}m · Sep: ${result.separacion*100}cm</div>
                             </td>
-                        </tr>
+                        </table>
                     `;
                     result.listado.forEach(item => {
                         currentSistHTML += renderRow(item);
                     });
                 });
             } 
-            else { // grouped
+            else {
                 const grupos = {};
                 estado.tabiques.forEach(t => {
-                    const r = calcularTabique(t);
+                    const r = calcularTabique(t, opcionesUsuario);
                     if (!r) return;
+                    if (r.esReferencia) hayTabiqueComun = true;
                     const key = `${r.sistema}_${r.separacion}`;
                     if (!grupos[key]) grupos[key] = { sistema: r.sistema, sep: r.separacion, items: {} };
                     
@@ -383,7 +686,7 @@
                                 <div class="mat-code">SISTEMA ${g.sistema}</div>
                                 <div class="mat-name">MATERIALES AGRUPADOS · Sep: ${g.sep*100}cm</div>
                             </td>
-                        </tr>
+                        </table>
                     `;
                     Object.values(g.items).forEach(item => {
                         currentSistHTML += renderRow(item);
@@ -394,8 +697,21 @@
             table.innerHTML = currentSistHTML;
             document.getElementById('s-medidas').classList.remove('active');
             document.getElementById('results').style.display = 'block';
+            document.getElementById('optionsPanel').classList.add('visible');
             const areaTotal = estado.tabiques.reduce((sum, t) => sum + (t.largo * t.alto), 0);
             document.getElementById('res-meta').innerHTML = `Área total: ${areaTotal.toFixed(2)} m² · ${estado.modo === 'separate' ? 'desglose por tabique' : 'materiales agrupados'}`;
+
+            // FIX #3: deshabilitar perf99 si el primer tabique NO es Tabique Común
+            const primerSistema = estado.tabiques.length > 0 ? determinarSistema(estado.tabiques[0].alto).nombre : '';
+            const perf99Card = document.getElementById('cardPerf99');
+            const perf99Badge = document.getElementById('perf99Badge');
+            if (primerSistema !== 'Tabique Común') {
+                perf99Card.classList.add('disabled');
+                perf99Badge.textContent = '· no aplica';
+            } else {
+                perf99Card.classList.remove('disabled');
+                perf99Badge.textContent = '';
+            }
         }
 
         function renderRow(item) {
@@ -409,19 +725,80 @@
                         <span class="mat-qty">${item.cant}</span>
                         <span class="mat-unit">${item.u}</span>
                     </td>
-                </tr>
+                </table>
             `;
+        }
+
+        // --- OPCIONES UI ---
+        function sincronizarUIconOpciones() {
+            document.getElementById('optCinta').value = opcionesUsuario.cinta;
+            document.getElementById('optTarugo').value = opcionesUsuario.tarugo;
+            document.getElementById('optPlaca').value = opcionesUsuario.placa;
+            document.getElementById('optPerf99').checked = opcionesUsuario.perf99;
+            document.getElementById('optAislacion').checked = opcionesUsuario.aislacion;
+            document.getElementById('pinturaInfo').innerHTML = opcionesUsuario.pintura ? 'Pintura añadida' : '';
+        }
+
+        function aplicarOpcion(tipo) {
+            if (tipo === 'cinta') opcionesUsuario.cinta = document.getElementById('optCinta').value;
+            else if (tipo === 'tarugo') opcionesUsuario.tarugo = document.getElementById('optTarugo').value;
+            else if (tipo === 'placa') opcionesUsuario.placa = document.getElementById('optPlaca').value;
+            else if (tipo === 'perf99') opcionesUsuario.perf99 = document.getElementById('optPerf99').checked;
+            else if (tipo === 'aislacion') opcionesUsuario.aislacion = document.getElementById('optAislacion').checked;
+            renderResultados();
+        }
+
+        function aplicarPintura() {
+            const linea = document.getElementById('optLineaPintura').value;
+            const areaTotal = estado.tabiques.reduce((sum, t) => sum + (t.largo * t.alto * 2), 0);
+            const litrosNecesarios = areaTotal / 4;
+
+            const envases = linea === 'premium' 
+                ? [{ cod:'1199', desc:'LATEX PREMIUM BLANCO 20 LTS', cap:20 },
+                   { cod:'1201', desc:'LATEX PREMIUM BLANCO 10 LTS', cap:10 },
+                   { cod:'1200', desc:'LATEX PREMIUM BLANCO 4 LTS', cap:4 }]
+                : [{ cod:'1204', desc:'LATEX ECONOVE BLANCO 20 LTS', cap:20 },
+                   { cod:'1203', desc:'LATEX ECONOVE BLANCO 10 LTS', cap:10 },
+                   { cod:'1202', desc:'LATEX ECONOVE BLANCO 4 LTS', cap:4 }];
+
+            // FIX #2: usa función de optimización genérica
+            const seleccion = optimizarEnvases(litrosNecesarios, envases);
+
+            // FIX #2: sellador con optimización, no escalado simple
+            const areaSellador = areaTotal;
+            const litrosSellador = areaSellador / 60;
+            const envasesSellador = [
+                { cod:'288', desc:'SELLADOR FIJADOR ANCLAFLEX 20 LT', cap:20 },
+                { cod:'287', desc:'SELLADOR FIJADOR ANCLAFLEX 10 LT', cap:10 },
+                { cod:'289', desc:'SELLADOR FIJADOR ANCLAFLEX 4 LT', cap:4 }
+            ];
+            const seleccionSellador = litrosSellador > 0 ? optimizarEnvases(litrosSellador, envasesSellador) : [];
+
+            opcionesUsuario.pintura = { linea, envases: seleccion, sellador: seleccionSellador };
+            document.getElementById('pinturaInfo').innerHTML = `${linea.toUpperCase()}: ${seleccion.map(s=>s.cant+'x'+s.cod).join(', ')}`;
+            renderResultados();
         }
 
         function resetAll() {
             estado = { tabiques: [], modo: 'separate' };
+            opcionesUsuario = {
+                cinta: 'papel',
+                tarugo: '1157',
+                placa: 'std240',
+                perf99: false,
+                aislacion: false,
+                pintura: null
+            };
+            sugerenciaW111 = { pendiente: false, medidaIdx: -1 };
             document.getElementById('medInput').value = '';
             document.getElementById('results').style.display = 'none';
             document.getElementById('s-medidas').classList.add('active');
+            document.getElementById('optionsPanel').classList.remove('visible');
+            document.getElementById('panelW111Sugerencia').style.display = 'none';
             parseMedidas();
-            // resetear modo visual en caso de que se haya cambiado
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.mode-btn[data-mode="separate"]')?.classList.add('active');
+            sincronizarUIconOpciones();
         }
     </script>
 </body>
