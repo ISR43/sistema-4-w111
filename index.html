@@ -176,6 +176,57 @@
             background: var(--accent); color: #0f0f11; padding: 3px 8px;
             border-radius: 20px; margin-left: 6px;
         }
+
+        /* ── PRESENTACIÓN DE DATOS ─────────────────────────────── */
+        .presentacion-panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); margin-bottom: 16px; overflow: hidden;
+        }
+        .presentacion-header {
+            background: var(--surface2); border-bottom: 1px solid var(--border);
+            padding: 14px 22px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; transition: background 0.15s;
+            user-select: none;
+        }
+        .presentacion-header:hover { background: rgba(71, 212, 255, 0.05); }
+        .presentacion-titulo {
+            font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+            color: var(--accent2); text-transform: uppercase;
+        }
+        .presentacion-toggle {
+            font-size: 10px; color: var(--muted); transition: transform 0.25s;
+            font-family: var(--mono);
+        }
+        .presentacion-toggle.open { transform: rotate(180deg); color: var(--accent2); }
+        .presentacion-body { padding: 6px 22px; display: none; }
+        .presentacion-body.open { display: block; animation: fadeUp 0.25s ease both; }
+        .pd-sistema {
+            padding: 18px 0; border-bottom: 1px dashed var(--border);
+        }
+        .pd-sistema:first-child { padding-top: 14px; }
+        .pd-sistema:last-child { border-bottom: none; padding-bottom: 14px; }
+        .pd-sistema-titulo {
+            font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px;
+            line-height: 1.4;
+        }
+        .pd-sistema-titulo b { color: var(--accent); font-weight: 800; }
+        .pd-linea {
+            font-family: var(--mono); font-size: 11px; line-height: 2; color: var(--muted);
+            display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap;
+        }
+        .pd-linea b { color: var(--text); font-weight: 600; white-space: nowrap; }
+        .pd-linea span { color: var(--text); }
+        .pd-linea .pd-formula {
+            color: var(--accent2); background: var(--surface2);
+            padding: 1px 8px; border-radius: 4px; border: 1px solid var(--border);
+        }
+        .pd-nota-perf {
+            margin-top: 10px; padding: 8px 12px;
+            background: rgba(255, 193, 7, 0.08); border-left: 2px solid var(--warn);
+            border-radius: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted);
+        }
+        .pd-nota-perf b { color: var(--warn); }
+
         @media (max-width: 480px) {
             .mode-selector { flex-direction: column; }
             .results-meta { text-align: left; }
@@ -226,6 +277,15 @@
                 <div class="results-footer">
                     · Tornillería → múltiplo de 50 superior &nbsp;·&nbsp; Sin optimización de cortes &nbsp;·&nbsp; Escalado estricto cinta/masilla
                 </div>
+            </div>
+
+            <!-- PRESENTACIÓN DE DATOS (nueva sección) -->
+            <div class="presentacion-panel" id="presentacionPanel" style="display:none;">
+                <div class="presentacion-header" onclick="togglePresentacion()">
+                    <span class="presentacion-titulo">▸ Presentación de datos</span>
+                    <span class="presentacion-toggle open" id="presentacionToggle">▼</span>
+                </div>
+                <div class="presentacion-body open" id="presentacionBody"></div>
             </div>
 
             <!-- Sugerencia de cambio Tabique Común → W111 (FIX #4) -->
@@ -332,6 +392,99 @@
             FACTOR_CINTA: 1.05 * 2,
             FACTOR_MASILLA: 0.8 * 2,
             MULTIPLO_TORNILLOS: 50
+        };
+
+        // ──────────────────────────────────────────────────────────────
+        // PRESENTACIÓN DE DATOS — config técnica de cada sistema
+        // Capas: array de [valor_mm, tipo] donde tipo = "placa" | "estructura"
+        // ──────────────────────────────────────────────────────────────
+        const PRESENTACION_DATOS = {
+            'Tabique Común': {
+                esReferencia: true,
+                perfilerias: {
+                    0.4: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/40 cm',
+                        capas: [['placa', 12.5], ['estructura', 70], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 70 + 12,5 = 95 mm',
+                        espesorTotal: 95
+                    },
+                    0.6: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/60 cm',
+                        capas: [['placa', 12.5], ['estructura', 70], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 70 + 12,5 = 95 mm',
+                        espesorTotal: 95
+                    }
+                },
+                placas: '1 m² DE placa de yeso STD 12,5 mm por cada cara'
+            },
+            'W111': {
+                perfilerias: {
+                    0.4: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/40 cm',
+                        capas: [['placa', 12.5], ['estructura', 70], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 70 + 12,5 = 95 mm',
+                        espesorTotal: 95
+                    },
+                    0.6: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/60 cm',
+                        capas: [['placa', 12.5], ['estructura', 70], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 70 + 12,5 = 95 mm',
+                        espesorTotal: 95
+                    }
+                },
+                placas: '1 m² DE placa de yeso STD 12,5 mm por cada cara'
+            },
+            'W112': {
+                perfilerias: {
+                    0.4: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/40 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 12,5 + 12,5 = 120 mm',
+                        espesorTotal: 120
+                    },
+                    0.6: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/60 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 12,5 + 12,5 = 120 mm',
+                        espesorTotal: 120
+                    }
+                },
+                placas: '2 m² DE placa de yeso STD 12,5 mm por cada cara'
+            },
+            'W115': {
+                perfilerias: {
+                    0.4: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/40 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 70 + 12,5 + 12,5 = 190 mm',
+                        espesorTotal: 190
+                    },
+                    0.6: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/60 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 70 + 12,5 + 12,5 = 190 mm',
+                        espesorTotal: 190
+                    }
+                },
+                placas: '2 m² DE placa de yeso STD 12,5 mm por cada cara'
+            },
+            'W116': {
+                perfilerias: {
+                    0.4: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/40 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['estructura', 160], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 160 + 70 + 12,5 + 12,5 = 350 mm',
+                        espesorTotal: 350
+                    },
+                    0.6: {
+                        texto: 'Montante 70 mm + Solera 70 mm separados c/60 cm',
+                        capas: [['placa', 12.5], ['placa', 12.5], ['estructura', 70], ['estructura', 160], ['estructura', 70], ['placa', 12.5], ['placa', 12.5]],
+                        espesorTxt: '12,5 + 12,5 + 70 + 160 + 70 + 12,5 + 12,5 = 350 mm',
+                        espesorTotal: 350
+                    }
+                },
+                placas: '2 m² DE placa de yeso STD 12,5 mm por cada cara'
+            }
         };
 
         const ceil = x => Math.ceil(x);
@@ -639,17 +792,91 @@
             document.getElementById('panelW111Sugerencia').style.display = 'none';
         }
 
+        // ──────────────────────────────────────────────────────────────
+        // PRESENTACIÓN DE DATOS — render y toggle
+        // ──────────────────────────────────────────────────────────────
+        function togglePresentacion() {
+            const body = document.getElementById('presentacionBody');
+            const toggle = document.getElementById('presentacionToggle');
+            body.classList.toggle('open');
+            toggle.classList.toggle('open');
+        }
+
+        function renderPresentacion(sistemas) {
+            const panel = document.getElementById('presentacionPanel');
+            const body = document.getElementById('presentacionBody');
+
+            if (!sistemas || sistemas.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.display = 'block';
+            // expandir por defecto al renderizar
+            body.classList.add('open');
+            document.getElementById('presentacionToggle').classList.add('open');
+
+            // dedupe por sistema + separación
+            const seen = new Set();
+            const unicos = [];
+            sistemas.forEach(s => {
+                const key = `${s.sistema}|${s.sep}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unicos.push(s);
+                }
+            });
+
+            let html = '';
+            unicos.forEach(s => {
+                const config = PRESENTACION_DATOS[s.sistema];
+                if (!config) return;
+
+                const sepCm = Math.round(s.sep * 100);
+                // matchear 0.4 vs 0.6 (puede venir 0.4000001 por floats)
+                const sepKey = Math.round(s.sep * 10) / 10;
+                const perfileria = config.perfilerias[sepKey];
+                if (!perfileria) return;
+
+                // nota si el usuario eligió perf 99/100 (solo aplica a Tabique Común)
+                let notaPerf = '';
+                if (opcionesUsuario.perf99 && config.esReferencia) {
+                    notaPerf = `
+                        <div class="pd-nota-perf">
+                            <b>⚠ Perfilería alternativa:</b> este cálculo se está realizando con montantes 99 mm + soleras 100 mm (opcional).
+                            La presentación de datos arriba corresponde a la configuración estándar (70/70).
+                        </div>`;
+                }
+
+                html += `
+                    <div class="pd-sistema">
+                        <div class="pd-sistema-titulo">
+                            Configuración del tabique <b>${s.sistema}</b> / separación de perfiles c/<b>${sepCm}</b> cm
+                        </div>
+                        <div class="pd-linea"><b>• Perfilería:</b> <span>${perfileria.texto}</span></div>
+                        <div class="pd-linea"><b>• Placas:</b> <span>${config.placas}</span></div>
+                        <div class="pd-linea"><b>• Espesor total del tabique:</b> <span class="pd-formula">${perfileria.espesorTxt}</span></div>
+                        ${notaPerf}
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html || '<div style="padding:20px 0; font-family:var(--mono); font-size:11px; color:var(--muted);">No hay configuración para mostrar.</div>';
+        }
+
         function renderResultados() {
             const table = document.getElementById('mat-table');
             table.innerHTML = '';
             let currentSistHTML = '';
             let hayTabiqueComun = false;
+            const sistemasParaPresentacion = [];
 
             if (estado.modo === 'separate') {
                 estado.tabiques.forEach(tabique => {
                     const result = calcularTabique(tabique, opcionesUsuario);
                     if (!result) return;
                     if (result.esReferencia) hayTabiqueComun = true;
+                    sistemasParaPresentacion.push({ sistema: result.sistema, sep: result.separacion });
                     
                     currentSistHTML += `
                         <tr class="system-divider">
@@ -670,6 +897,7 @@
                     const r = calcularTabique(t, opcionesUsuario);
                     if (!r) return;
                     if (r.esReferencia) hayTabiqueComun = true;
+                    sistemasParaPresentacion.push({ sistema: r.sistema, sep: r.separacion });
                     const key = `${r.sistema}_${r.separacion}`;
                     if (!grupos[key]) grupos[key] = { sistema: r.sistema, sep: r.separacion, items: {} };
                     
@@ -700,6 +928,9 @@
             document.getElementById('optionsPanel').classList.add('visible');
             const areaTotal = estado.tabiques.reduce((sum, t) => sum + (t.largo * t.alto), 0);
             document.getElementById('res-meta').innerHTML = `Área total: ${areaTotal.toFixed(2)} m² · ${estado.modo === 'separate' ? 'desglose por tabique' : 'materiales agrupados'}`;
+
+            // Renderizar presentación de datos con los sistemas usados
+            renderPresentacion(sistemasParaPresentacion);
 
             // FIX #3: deshabilitar perf99 si el primer tabique NO es Tabique Común
             const primerSistema = estado.tabiques.length > 0 ? determinarSistema(estado.tabiques[0].alto).nombre : '';
@@ -795,6 +1026,7 @@
             document.getElementById('s-medidas').classList.add('active');
             document.getElementById('optionsPanel').classList.remove('visible');
             document.getElementById('panelW111Sugerencia').style.display = 'none';
+            document.getElementById('presentacionPanel').style.display = 'none';
             parseMedidas();
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.mode-btn[data-mode="separate"]')?.classList.add('active');
